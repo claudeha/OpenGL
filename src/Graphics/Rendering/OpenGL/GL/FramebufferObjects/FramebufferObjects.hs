@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.FramebufferObjects.FramebufferObjects
--- Copyright   :  (c) Sven Panne, Lars Corbijn 2011-2013
+-- Copyright   :  (c) Sven Panne 2011-2019, Lars Corbijn 2011-2016
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -16,11 +16,11 @@ module Graphics.Rendering.OpenGL.GL.FramebufferObjects.FramebufferObjects (
    FramebufferStatus(..), framebufferStatus,
 ) where
 
+import Data.StateVar
 import Graphics.Rendering.OpenGL.GL.FramebufferObjects.FramebufferObject
 import Graphics.Rendering.OpenGL.GL.FramebufferObjects.FramebufferTarget
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 -----------------------------------------------------------------------------
 
@@ -61,14 +61,14 @@ data FramebufferStatus =
 
 unmarshalFramebufferStatus :: GLenum -> FramebufferStatus
 unmarshalFramebufferStatus x
-   | x == gl_FRAMEBUFFER_COMPLETE = Complete
-   | x == gl_FRAMEBUFFER_UNDEFINED = Undefined
-   | x == gl_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT
+   | x == GL_FRAMEBUFFER_COMPLETE = Complete
+   | x == GL_FRAMEBUFFER_UNDEFINED = Undefined
+   | x == GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT
       = IncompleteMissingAttachment
-   | x == gl_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER = IncompleteDrawBuffer
-   | x == gl_FRAMEBUFFER_INCOMPLETE_READ_BUFFER = IncompleteReadBuffer
-   | x == gl_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE = IncompleteMultiSample
-   | x == gl_FRAMEBUFFER_UNSUPPORTED = Unsupported
+   | x == GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER = IncompleteDrawBuffer
+   | x == GL_FRAMEBUFFER_INCOMPLETE_READ_BUFFER = IncompleteReadBuffer
+   | x == GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE = IncompleteMultiSample
+   | x == GL_FRAMEBUFFER_UNSUPPORTED = Unsupported
    | otherwise = error $ "unmarshalFramebufferStatus: unknown value: "
       ++ show x
 

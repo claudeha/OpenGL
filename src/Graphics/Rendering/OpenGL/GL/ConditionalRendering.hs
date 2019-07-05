@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.ConditionalRendering
--- Copyright   :  (c) Sven Panne 2013
+-- Copyright   :  (c) Sven Panne 2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -20,7 +20,7 @@ module Graphics.Rendering.OpenGL.GL.ConditionalRendering (
 
 import Graphics.Rendering.OpenGL.GL.Exception
 import Graphics.Rendering.OpenGL.GL.QueryObject
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -33,10 +33,10 @@ data ConditionalRenderMode =
 
 marshalConditionalRenderMode :: ConditionalRenderMode -> GLenum
 marshalConditionalRenderMode x = case x of
-   QueryWait -> gl_QUERY_WAIT
-   QueryNoWait -> gl_QUERY_NO_WAIT
-   QueryByRegionWait -> gl_QUERY_BY_REGION_WAIT
-   QueryByRegionNoWait -> gl_QUERY_BY_REGION_NO_WAIT
+   QueryWait -> GL_QUERY_WAIT
+   QueryNoWait -> GL_QUERY_NO_WAIT
+   QueryByRegionWait -> GL_QUERY_BY_REGION_WAIT
+   QueryByRegionNoWait -> GL_QUERY_BY_REGION_NO_WAIT
 
 --------------------------------------------------------------------------------
 

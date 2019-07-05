@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Texturing.Parameters
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -24,18 +24,18 @@ module Graphics.Rendering.OpenGL.GL.Texturing.Parameters (
 ) where
 
 import Control.Monad
+import Data.StateVar
 import Graphics.Rendering.OpenGL.GL.Capability
 import Graphics.Rendering.OpenGL.GL.ComparisonFunction
 import Graphics.Rendering.OpenGL.GL.CoordTrans
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.Texturing.Filter
 import Graphics.Rendering.OpenGL.GL.Texturing.PixelInternalFormat
 import Graphics.Rendering.OpenGL.GL.Texturing.Specification
 import Graphics.Rendering.OpenGL.GL.Texturing.TexParameter
 import Graphics.Rendering.OpenGL.GL.VertexSpec
 import Graphics.Rendering.OpenGL.GLU.ErrorsInternal
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -61,25 +61,25 @@ data Clamping =
 
 marshalTextureWrapMode :: (Repetition, Clamping) -> GLint
 marshalTextureWrapMode x = fromIntegral $ case x of
-   (Repeated, Clamp) -> gl_CLAMP
-   (Repeated, Repeat) -> gl_REPEAT
-   (Repeated, ClampToEdge) -> gl_CLAMP_TO_EDGE
-   (Repeated, ClampToBorder) -> gl_CLAMP_TO_BORDER
-   (Mirrored, Clamp) -> gl_MIRROR_CLAMP
-   (Mirrored, Repeat) -> gl_MIRRORED_REPEAT
-   (Mirrored, ClampToEdge) -> gl_MIRROR_CLAMP_TO_EDGE
-   (Mirrored, ClampToBorder) -> gl_MIRROR_CLAMP_TO_BORDER
+   (Repeated, Clamp) -> GL_CLAMP
+   (Repeated, Repeat) -> GL_REPEAT
+   (Repeated, ClampToEdge) -> GL_CLAMP_TO_EDGE
+   (Repeated, ClampToBorder) -> GL_CLAMP_TO_BORDER
+   (Mirrored, Clamp) -> GL_MIRROR_CLAMP_EXT
+   (Mirrored, Repeat) -> GL_MIRRORED_REPEAT
+   (Mirrored, ClampToEdge) -> GL_MIRROR_CLAMP_TO_EDGE
+   (Mirrored, ClampToBorder) -> GL_MIRROR_CLAMP_TO_BORDER_EXT
 
 unmarshalTextureWrapMode :: GLint -> (Repetition, Clamping)
 unmarshalTextureWrapMode x
-   | y == gl_CLAMP = (Repeated, Clamp)
-   | y == gl_REPEAT = (Repeated, Repeat)
-   | y == gl_CLAMP_TO_EDGE = (Repeated, ClampToEdge)
-   | y == gl_CLAMP_TO_BORDER = (Repeated, ClampToBorder)
-   | y == gl_MIRROR_CLAMP = (Mirrored, Clamp)
-   | y == gl_MIRRORED_REPEAT = (Mirrored, Repeat)
-   | y == gl_MIRROR_CLAMP_TO_EDGE = (Mirrored, ClampToEdge)
-   | y == gl_MIRROR_CLAMP_TO_BORDER = (Mirrored, ClampToBorder)
+   | y == GL_CLAMP = (Repeated, Clamp)
+   | y == GL_REPEAT = (Repeated, Repeat)
+   | y == GL_CLAMP_TO_EDGE = (Repeated, ClampToEdge)
+   | y == GL_CLAMP_TO_BORDER = (Repeated, ClampToBorder)
+   | y == GL_MIRROR_CLAMP_EXT = (Mirrored, Clamp)
+   | y == GL_MIRRORED_REPEAT = (Mirrored, Repeat)
+   | y == GL_MIRROR_CLAMP_TO_EDGE = (Mirrored, ClampToEdge)
+   | y == GL_MIRROR_CLAMP_TO_BORDER_EXT = (Mirrored, ClampToBorder)
    | otherwise = error ("unmarshalTextureWrapMode: illegal value " ++ show x)
    where y = fromIntegral x
 
@@ -159,13 +159,13 @@ depthTextureMode =
 
 marshalTextureCompareMode :: Capability -> GLint
 marshalTextureCompareMode x = fromIntegral $ case x of
-   Disabled -> gl_NONE
-   Enabled -> gl_COMPARE_REF_TO_TEXTURE
+   Disabled -> GL_NONE
+   Enabled -> GL_COMPARE_REF_TO_TEXTURE
 
 unmarshalTextureCompareMode :: GLint -> Capability
 unmarshalTextureCompareMode x
-   | y == gl_NONE = Disabled
-   | y == gl_COMPARE_REF_TO_TEXTURE = Enabled
+   | y == GL_NONE = Disabled
+   | y == GL_COMPARE_REF_TO_TEXTURE = Enabled
    | otherwise = error ("unmarshalTextureCompareMode: illegal value " ++ show x)
    where y = fromIntegral x
 
@@ -191,15 +191,15 @@ data TextureCompareOperator =
    | GequalR
    deriving ( Eq, Ord, Show )
 
-marshalTextureCompareOperator :: TextureCompareOperator -> GLint
+marshalTextureCompareOperator :: TextureCompareOperator -> GLenum
 marshalTextureCompareOperator x = case x of
-   LequalR -> 0x819c
-   GequalR -> 0x819d
+   LequalR -> GL_TEXTURE_LEQUAL_R_SGIX
+   GequalR -> GL_TEXTURE_GEQUAL_R_SGIX
 
-unmarshalTextureCompareOperator :: GLint -> TextureCompareOperator
+unmarshalTextureCompareOperator :: GLenum -> TextureCompareOperator
 unmarshalTextureCompareOperator x
-   | x == 0x819c = LequalR
-   | x == 0x819d = GequalR
+   | x == GL_TEXTURE_LEQUAL_R_SGIX = LequalR
+   | x == GL_TEXTURE_GEQUAL_R_SGIX = GequalR
    | otherwise = error ("unmarshalTextureCompareOperator: illegal value " ++ show x)
 
 --------------------------------------------------------------------------------
@@ -208,12 +208,11 @@ textureCompareOperator :: ParameterizedTextureTarget t => t -> StateVar (Maybe T
 textureCompareOperator =
    combineTexParamsMaybe
       (texParami (unmarshalCapability . fromIntegral) (fromIntegral. marshalCapability) TextureCompare)
-      (texParami unmarshalTextureCompareOperator marshalTextureCompareOperator TextureCompareOperator)
+      (texParami (unmarshalTextureCompareOperator . fromIntegral) (fromIntegral . marshalTextureCompareOperator) TextureCompareOperator)
 
 --------------------------------------------------------------------------------
 
-combineTexParams :: ParameterizedTextureTarget t
-                 => (t -> StateVar a)
+combineTexParams :: (t -> StateVar a)
                  -> (t -> StateVar b)
                  -> (t -> StateVar (a,b))
 combineTexParams v w t =
@@ -221,8 +220,7 @@ combineTexParams v w t =
       (liftM2 (,) (get (v t)) (get (w t)))
       (\(x,y) -> do v t $= x; w t $= y)
 
-combineTexParamsMaybe :: ParameterizedTextureTarget t
-                      => (t -> StateVar Capability)
+combineTexParamsMaybe :: (t -> StateVar Capability)
                       -> (t -> StateVar a)
                       -> (t -> StateVar (Maybe a))
 combineTexParamsMaybe enab val t =

@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.SyncObjects
--- Copyright   :  (c) Sven Panne 2013
+-- Copyright   :  (c) Sven Panne 2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -25,14 +25,16 @@ module Graphics.Rendering.OpenGL.GL.SyncObjects (
    SyncStatus(..), syncStatus
 ) where
 
-import Foreign.Marshal.Utils
-import Foreign.Ptr
+import Control.Monad.IO.Class
+import Data.ObjectName
+import Data.StateVar
+import Foreign.Marshal.Utils ( with )
+import Foreign.Ptr ( nullPtr )
+import Graphics.Rendering.OpenGL.GL.DebugOutput
 import Graphics.Rendering.OpenGL.GL.GLboolean
-import Graphics.Rendering.OpenGL.GL.ObjectName
 import Graphics.Rendering.OpenGL.GL.PeekPoke
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -40,12 +42,15 @@ newtype SyncObject = SyncObject { syncID :: GLsync }
    deriving ( Eq, Ord, Show )
 
 instance ObjectName SyncObject where
-   isObjectName = fmap unmarshalGLboolean . glIsSync . syncID
-   deleteObjectName = glDeleteSync . syncID
+   isObjectName = liftIO . fmap unmarshalGLboolean . glIsSync . syncID
+   deleteObjectName = liftIO . glDeleteSync . syncID
+
+instance CanBeLabeled SyncObject where
+   objectLabel = objectPtrLabel . syncID
 
 syncGpuCommandsComplete :: IO SyncObject
 syncGpuCommandsComplete =
-   fmap SyncObject $ glFenceSync gl_SYNC_GPU_COMMANDS_COMPLETE 0
+   fmap SyncObject $ glFenceSync GL_SYNC_GPU_COMMANDS_COMPLETE 0
 
 --------------------------------------------------------------------------------
 
@@ -58,7 +63,7 @@ data WaitFlag = SyncFlushCommands
 
 marshalWaitFlag :: WaitFlag -> GLbitfield
 marshalWaitFlag x = case x of
-   SyncFlushCommands -> gl_SYNC_FLUSH_COMMANDS_BIT
+   SyncFlushCommands -> GL_SYNC_FLUSH_COMMANDS_BIT
 
 --------------------------------------------------------------------------------
 
@@ -71,10 +76,10 @@ data WaitResult =
 
 unmarshalWaitResult :: GLenum -> WaitResult
 unmarshalWaitResult x
-   | x == gl_ALREADY_SIGNALED = AlreadySignaled
-   | x == gl_TIMEOUT_EXPIRED = TimeoutExpired
-   | x == gl_CONDITION_SATISFIED = ConditionSatisfied
-   | x == gl_WAIT_FAILED = WaitFailed
+   | x == GL_ALREADY_SIGNALED = AlreadySignaled
+   | x == GL_TIMEOUT_EXPIRED = TimeoutExpired
+   | x == GL_CONDITION_SATISFIED = ConditionSatisfied
+   | x == GL_WAIT_FAILED = WaitFailed
    | otherwise = error ("unmarshalWaitResult: illegal value " ++ show x)
 
 --------------------------------------------------------------------------------
@@ -86,7 +91,7 @@ clientWaitSync syncObject flags =
 
 waitSync :: SyncObject -> IO ()
 waitSync syncObject =
-   glWaitSync (syncID syncObject) 0 (fromIntegral gl_TIMEOUT_IGNORED)
+   glWaitSync (syncID syncObject) 0 (fromIntegral GL_TIMEOUT_IGNORED)
 
 maxServerWaitTimeout :: GettableStateVar WaitTimeout
 maxServerWaitTimeout =
@@ -101,13 +106,13 @@ data SyncStatus =
 
 unmarshalSyncStatus :: GLenum -> SyncStatus
 unmarshalSyncStatus x
-   | x == gl_UNSIGNALED = Unsignaled
-   | x == gl_SIGNALED = Signaled
+   | x == GL_UNSIGNALED = Unsignaled
+   | x == GL_SIGNALED = Signaled
    | otherwise = error ("unmarshalSyncStatus: illegal value " ++ show x)
 
 syncStatus :: SyncObject -> GettableStateVar SyncStatus
 syncStatus syncObject =
    makeGettableStateVar $
       with 0 $ \buf -> do
-         glGetSynciv (syncID syncObject) gl_SYNC_STATUS 1 nullPtr buf
+         glGetSynciv (syncID syncObject) GL_SYNC_STATUS 1 nullPtr buf
          peek1 (unmarshalSyncStatus . fromIntegral) buf

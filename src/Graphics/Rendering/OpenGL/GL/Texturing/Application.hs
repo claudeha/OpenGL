@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Texturing.Application
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 -- 
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -17,7 +17,7 @@ module Graphics.Rendering.OpenGL.GL.Texturing.Application (
    texture
 ) where
 
-import Graphics.Rendering.OpenGL.GL.StateVar
+import Data.StateVar
 import Graphics.Rendering.OpenGL.GL.Capability
 import Graphics.Rendering.OpenGL.GL.Texturing.TextureTarget
 

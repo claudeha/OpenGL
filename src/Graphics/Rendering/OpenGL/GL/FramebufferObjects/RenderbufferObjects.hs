@@ -1,8 +1,7 @@
-{-# OPTIONS_HADDOCK hide #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.FramebufferObjects.RenderbufferObjects
--- Copyright   :  (c) Sven Panne, Lars Corbijn 2011-2013
+-- Copyright   :  (c) Sven Panne 2011-2019, Lars Corbijn 2011-2016
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -22,12 +21,12 @@ module Graphics.Rendering.OpenGL.GL.FramebufferObjects.RenderbufferObjects (
    renderbufferStorage, renderbufferStorageMultiSample,
 ) where
 
+import Data.StateVar
 import Graphics.Rendering.OpenGL.GL.FramebufferObjects.RenderbufferObject
 import Graphics.Rendering.OpenGL.GL.FramebufferObjects.RenderbufferTarget
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.Texturing.PixelInternalFormat
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 -----------------------------------------------------------------------------
 

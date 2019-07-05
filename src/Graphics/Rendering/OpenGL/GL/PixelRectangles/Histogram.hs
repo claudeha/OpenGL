@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.PixelRectangles.Histogram
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -18,6 +18,7 @@ module Graphics.Rendering.OpenGL.GL.PixelRectangles.Histogram (
    histogramRGBASizes, histogramLuminanceSize
 ) where
 
+import Data.StateVar
 import Foreign.Marshal.Utils
 import Graphics.Rendering.OpenGL.GL.Capability
 import Graphics.Rendering.OpenGL.GL.PeekPoke
@@ -25,10 +26,9 @@ import Graphics.Rendering.OpenGL.GL.PixelData
 import Graphics.Rendering.OpenGL.GL.PixelRectangles.ColorTable
 import Graphics.Rendering.OpenGL.GL.PixelRectangles.Reset
 import Graphics.Rendering.OpenGL.GL.PixelRectangles.Sink
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.Texturing.PixelInternalFormat
 import Graphics.Rendering.OpenGL.GL.VertexSpec
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -38,8 +38,8 @@ data HistogramTarget =
 
 marshalHistogramTarget :: HistogramTarget -> GLenum
 marshalHistogramTarget x = case x of
-   Histogram -> gl_HISTOGRAM
-   ProxyHistogram -> gl_PROXY_HISTOGRAM
+   Histogram -> GL_HISTOGRAM
+   ProxyHistogram -> GL_PROXY_HISTOGRAM
 
 proxyToHistogramTarget :: Proxy -> HistogramTarget
 proxyToHistogramTarget x = case x of
@@ -106,14 +106,14 @@ data GetHistogramParameterPName =
 
 marshalGetHistogramParameterPName :: GetHistogramParameterPName -> GLenum
 marshalGetHistogramParameterPName x = case x of
-   HistogramWidth -> gl_HISTOGRAM_WIDTH
-   HistogramFormat -> gl_HISTOGRAM_FORMAT
-   HistogramRedSize -> gl_HISTOGRAM_RED_SIZE
-   HistogramGreenSize -> gl_HISTOGRAM_GREEN_SIZE
-   HistogramBlueSize -> gl_HISTOGRAM_BLUE_SIZE
-   HistogramAlphaSize -> gl_HISTOGRAM_ALPHA_SIZE
-   HistogramLuminanceSize -> gl_HISTOGRAM_LUMINANCE_SIZE
-   HistogramSink -> gl_HISTOGRAM_SINK
+   HistogramWidth -> GL_HISTOGRAM_WIDTH
+   HistogramFormat -> GL_HISTOGRAM_FORMAT
+   HistogramRedSize -> GL_HISTOGRAM_RED_SIZE
+   HistogramGreenSize -> GL_HISTOGRAM_GREEN_SIZE
+   HistogramBlueSize -> GL_HISTOGRAM_BLUE_SIZE
+   HistogramAlphaSize -> GL_HISTOGRAM_ALPHA_SIZE
+   HistogramLuminanceSize -> GL_HISTOGRAM_LUMINANCE_SIZE
+   HistogramSink -> GL_HISTOGRAM_SINK
 
 --------------------------------------------------------------------------------
 

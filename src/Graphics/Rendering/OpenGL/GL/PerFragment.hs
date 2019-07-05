@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.PerFragment
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -48,6 +48,7 @@ module Graphics.Rendering.OpenGL.GL.PerFragment (
 ) where
 
 import Control.Monad
+import Data.StateVar
 import Graphics.Rendering.OpenGL.GL.BlendingFactor
 import Graphics.Rendering.OpenGL.GL.Capability
 import Graphics.Rendering.OpenGL.GL.ComparisonFunction
@@ -57,9 +58,9 @@ import Graphics.Rendering.OpenGL.GL.Face
 import Graphics.Rendering.OpenGL.GL.Framebuffer
 import Graphics.Rendering.OpenGL.GL.GLboolean
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.VertexSpec
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.Rendering.OpenGL.GLU.ErrorsInternal
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -104,7 +105,7 @@ depthBounds =
    makeStateVarMaybe
       (return CapDepthBoundsTest)
       (getClampd2 (,) GetDepthBounds)
-      (uncurry glDepthBounds)
+      (uncurry glDepthBoundsEXT)
 
 --------------------------------------------------------------------------------
 
@@ -126,16 +127,28 @@ stencilTest = makeCapability CapStencilTest
 stencilFunc :: StateVar (ComparisonFunction, GLint, GLuint)
 stencilFunc =
    makeStateVar
-      (liftM3 (,,) (getEnum1 unmarshalComparisonFunction GetStencilFunc)
-                   (getInteger1 id GetStencilRef)
-                   (getInteger1 fromIntegral GetStencilValueMask))
+      (get (stencilFuncSeparate Front))
       (\(func, ref, mask) ->
          glStencilFunc (marshalComparisonFunction func) ref mask)
 
-stencilFuncSeparate :: Face -> SettableStateVar (ComparisonFunction, GLint, GLuint)
+stencilFuncSeparate :: Face -> StateVar (ComparisonFunction, GLint, GLuint)
 stencilFuncSeparate face =
-   makeSettableStateVar $ \(func, ref, mask) ->
-      glStencilFuncSeparate (marshalFace face) (marshalComparisonFunction func) ref mask
+   makeStateVar
+      (case face of
+          Front -> getStencilFunc GetStencilFunc
+                                  GetStencilRef
+                                  GetStencilValueMask
+          Back -> getStencilFunc GetStencilBackFunc
+                                 GetStencilBackRef
+                                 GetStencilBackValueMask
+          FrontAndBack -> do recordInvalidEnum; return (Never, 0, 0))
+      (\(func, ref, mask) ->
+         glStencilFuncSeparate (marshalFace face)
+                               (marshalComparisonFunction func) ref mask)
+   where getStencilFunc func ref mask =
+            liftM3 (,,) (getEnum1 unmarshalComparisonFunction func)
+                        (getInteger1 id ref)
+                        (getInteger1 fromIntegral mask)
 
 --------------------------------------------------------------------------------
 
@@ -152,25 +165,25 @@ data StencilOp =
 
 marshalStencilOp :: StencilOp -> GLenum
 marshalStencilOp x = case x of
-   OpZero -> gl_ZERO
-   OpKeep -> gl_KEEP
-   OpReplace -> gl_REPLACE
-   OpIncr -> gl_INCR
-   OpIncrWrap -> gl_INCR_WRAP
-   OpDecr -> gl_DECR
-   OpDecrWrap -> gl_DECR_WRAP
-   OpInvert -> gl_INVERT
+   OpZero -> GL_ZERO
+   OpKeep -> GL_KEEP
+   OpReplace -> GL_REPLACE
+   OpIncr -> GL_INCR
+   OpIncrWrap -> GL_INCR_WRAP
+   OpDecr -> GL_DECR
+   OpDecrWrap -> GL_DECR_WRAP
+   OpInvert -> GL_INVERT
 
 unmarshalStencilOp :: GLenum -> StencilOp
 unmarshalStencilOp x
-   | x == gl_ZERO = OpZero
-   | x == gl_KEEP = OpKeep
-   | x == gl_REPLACE = OpReplace
-   | x == gl_INCR = OpIncr
-   | x == gl_INCR_WRAP = OpIncrWrap
-   | x == gl_DECR = OpDecr
-   | x == gl_DECR_WRAP = OpDecrWrap
-   | x == gl_INVERT = OpInvert
+   | x == GL_ZERO = OpZero
+   | x == GL_KEEP = OpKeep
+   | x == GL_REPLACE = OpReplace
+   | x == GL_INCR = OpIncr
+   | x == GL_INCR_WRAP = OpIncrWrap
+   | x == GL_DECR = OpDecr
+   | x == GL_DECR_WRAP = OpDecrWrap
+   | x == GL_INVERT = OpInvert
    | otherwise = error ("unmarshalStencilOp: illegal value " ++ show x)
 
 --------------------------------------------------------------------------------
@@ -178,20 +191,32 @@ unmarshalStencilOp x
 stencilOp :: StateVar (StencilOp, StencilOp, StencilOp)
 stencilOp =
    makeStateVar
-      (liftM3 (,,) (getEnum1 unmarshalStencilOp GetStencilFail)
-                   (getEnum1 unmarshalStencilOp GetStencilPassDepthFail)
-                   (getEnum1 unmarshalStencilOp GetStencilPassDepthPass))
+      (get (stencilOpSeparate Front))
       (\(sf, spdf, spdp) -> glStencilOp (marshalStencilOp sf)
                                         (marshalStencilOp spdf)
                                         (marshalStencilOp spdp))
 
-stencilOpSeparate :: Face -> SettableStateVar (StencilOp, StencilOp, StencilOp)
+stencilOpSeparate :: Face -> StateVar (StencilOp, StencilOp, StencilOp)
 stencilOpSeparate face =
-   makeSettableStateVar $ \(sf, spdf, spdp) ->
-      glStencilOpSeparate (marshalFace face)
-                          (marshalStencilOp sf)
-                          (marshalStencilOp spdf)
-                          (marshalStencilOp spdp)
+   makeStateVar
+      (case face of
+          Front -> getStencilOp GetStencilFail
+                                GetStencilPassDepthFail
+                                GetStencilPassDepthPass
+          Back ->  getStencilOp GetStencilBackFail
+                                GetStencilBackPassDepthFail
+                                GetStencilBackPassDepthPass
+          FrontAndBack -> do recordInvalidEnum
+                             return (OpZero, OpZero, OpZero))
+      (\(sf, spdf, spdp) -> glStencilOpSeparate (marshalFace face)
+                                                (marshalStencilOp sf)
+                                                (marshalStencilOp spdf)
+                                                (marshalStencilOp spdp))
+   where getStencilOp sf spdf spdp =
+            (liftM3 (,,) (getEnum1 unmarshalStencilOp sf)
+                         (getEnum1 unmarshalStencilOp spdf)
+                         (getEnum1 unmarshalStencilOp spdp))
+
 
 --------------------------------------------------------------------------------
 
@@ -200,7 +225,7 @@ activeStencilFace =
    makeStateVarMaybe
       (return CapStencilTestTwoSide)
       (getEnum1 unmarshalFace GetActiveStencilFace)
-      (glActiveStencilFace . marshalFace)
+      (glActiveStencilFaceEXT . marshalFace)
 
 --------------------------------------------------------------------------------
 
@@ -219,7 +244,7 @@ blend = makeCapability CapBlend
 -- | enable or disable blending based on the buffer bound to the /i/'th drawBuffer
 -- that is the buffer fmap (!! i) (get drawBuffers)
 blendBuffer :: DrawBufferIndex -> StateVar Capability
-blendBuffer = makeIndexedCapability ((fromIntegral gl_DRAW_BUFFER0) +) BlendI
+blendBuffer = makeIndexedCapability ((fromIntegral GL_DRAW_BUFFER0) +) BlendI
 
 --------------------------------------------------------------------------------
 
@@ -234,21 +259,21 @@ data BlendEquation =
 
 marshalBlendEquation :: BlendEquation -> GLenum
 marshalBlendEquation x = case x of
-   FuncAdd -> gl_FUNC_ADD
-   FuncSubtract -> gl_FUNC_SUBTRACT
-   FuncReverseSubtract -> gl_FUNC_REVERSE_SUBTRACT
-   Min -> gl_MIN
-   Max -> gl_MAX
-   LogicOp -> gl_INDEX_LOGIC_OP
+   FuncAdd -> GL_FUNC_ADD
+   FuncSubtract -> GL_FUNC_SUBTRACT
+   FuncReverseSubtract -> GL_FUNC_REVERSE_SUBTRACT
+   Min -> GL_MIN
+   Max -> GL_MAX
+   LogicOp -> GL_INDEX_LOGIC_OP
 
 unmarshalBlendEquation :: GLenum -> BlendEquation
 unmarshalBlendEquation x
-   | x == gl_FUNC_ADD = FuncAdd
-   | x == gl_FUNC_SUBTRACT = FuncSubtract
-   | x == gl_FUNC_REVERSE_SUBTRACT = FuncReverseSubtract
-   | x == gl_MIN = Min
-   | x == gl_MAX = Max
-   | x == gl_INDEX_LOGIC_OP = LogicOp
+   | x == GL_FUNC_ADD = FuncAdd
+   | x == GL_FUNC_SUBTRACT = FuncSubtract
+   | x == GL_FUNC_REVERSE_SUBTRACT = FuncReverseSubtract
+   | x == GL_MIN = Min
+   | x == GL_MAX = Max
+   | x == GL_INDEX_LOGIC_OP = LogicOp
    | otherwise = error ("unmarshalBlendEquation: illegal value " ++ show x)
 
 --------------------------------------------------------------------------------
@@ -327,41 +352,41 @@ data LogicOp =
 
 marshalLogicOp :: LogicOp -> GLenum
 marshalLogicOp x = case x of
-   Clear -> gl_CLEAR
-   And -> gl_AND
-   AndReverse -> gl_AND_REVERSE
-   Copy -> gl_COPY
-   AndInverted -> gl_AND_INVERTED
-   Noop -> gl_NOOP
-   Xor -> gl_XOR
-   Or -> gl_OR
-   Nor -> gl_NOR
-   Equiv -> gl_EQUIV
-   Invert -> gl_INVERT
-   OrReverse -> gl_OR_REVERSE
-   CopyInverted -> gl_COPY_INVERTED
-   OrInverted -> gl_OR_INVERTED
-   Nand -> gl_NAND
-   Set -> gl_SET
+   Clear -> GL_CLEAR
+   And -> GL_AND
+   AndReverse -> GL_AND_REVERSE
+   Copy -> GL_COPY
+   AndInverted -> GL_AND_INVERTED
+   Noop -> GL_NOOP
+   Xor -> GL_XOR
+   Or -> GL_OR
+   Nor -> GL_NOR
+   Equiv -> GL_EQUIV
+   Invert -> GL_INVERT
+   OrReverse -> GL_OR_REVERSE
+   CopyInverted -> GL_COPY_INVERTED
+   OrInverted -> GL_OR_INVERTED
+   Nand -> GL_NAND
+   Set -> GL_SET
 
 unmarshalLogicOp :: GLenum -> LogicOp
 unmarshalLogicOp x
-   | x == gl_CLEAR = Clear
-   | x == gl_AND = And
-   | x == gl_AND_REVERSE = AndReverse
-   | x == gl_COPY = Copy
-   | x == gl_AND_INVERTED = AndInverted
-   | x == gl_NOOP = Noop
-   | x == gl_XOR = Xor
-   | x == gl_OR = Or
-   | x == gl_NOR = Nor
-   | x == gl_EQUIV = Equiv
-   | x == gl_INVERT = Invert
-   | x == gl_OR_REVERSE = OrReverse
-   | x == gl_COPY_INVERTED = CopyInverted
-   | x == gl_OR_INVERTED = OrInverted
-   | x == gl_NAND = Nand
-   | x == gl_SET = Set
+   | x == GL_CLEAR = Clear
+   | x == GL_AND = And
+   | x == GL_AND_REVERSE = AndReverse
+   | x == GL_COPY = Copy
+   | x == GL_AND_INVERTED = AndInverted
+   | x == GL_NOOP = Noop
+   | x == GL_XOR = Xor
+   | x == GL_OR = Or
+   | x == GL_NOR = Nor
+   | x == GL_EQUIV = Equiv
+   | x == GL_INVERT = Invert
+   | x == GL_OR_REVERSE = OrReverse
+   | x == GL_COPY_INVERTED = CopyInverted
+   | x == GL_OR_INVERTED = OrInverted
+   | x == GL_NAND = Nand
+   | x == GL_SET = Set
    | otherwise = error ("unmarshalLogicOp: illegal value " ++ show x)
 
 --------------------------------------------------------------------------------

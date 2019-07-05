@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Polygons
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 -- 
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -20,6 +20,7 @@ module Graphics.Rendering.OpenGL.GL.Polygons (
 ) where
 
 import Control.Monad
+import Data.StateVar
 import Foreign.ForeignPtr
 import Foreign.Marshal.Array
 import Foreign.Ptr
@@ -29,8 +30,7 @@ import Graphics.Rendering.OpenGL.GL.PixelRectangles
 import Graphics.Rendering.OpenGL.GL.PolygonMode
 import Graphics.Rendering.OpenGL.GL.QueryUtils
 import Graphics.Rendering.OpenGL.GL.SavingState
-import Graphics.Rendering.OpenGL.GL.StateVar
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 

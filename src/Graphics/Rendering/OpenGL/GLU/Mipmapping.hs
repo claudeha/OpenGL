@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GLU.Mipmapping
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -16,13 +16,13 @@ module Graphics.Rendering.OpenGL.GLU.Mipmapping (
    scaleImage, build1DMipmaps, build2DMipmaps
 ) where
 
-import Graphics.Rendering.GLU.Raw
+import Graphics.GLU
 import Graphics.Rendering.OpenGL.GL.CoordTrans ( Size(..) )
 import Graphics.Rendering.OpenGL.GL.Texturing.PixelInternalFormat
 import Graphics.Rendering.OpenGL.GL.PixelData ( PixelData, withPixelData )
 import Graphics.Rendering.OpenGL.GL.Texturing.TextureTarget
 import Graphics.Rendering.OpenGL.GLU.ErrorsInternal ( recordInvalidValue )
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 -- Section 3.1 (Image Scaling)

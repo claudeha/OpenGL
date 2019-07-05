@@ -2,7 +2,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.PointParameter
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 -- 
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -18,7 +18,7 @@ module Graphics.Rendering.OpenGL.GL.PointParameter (
 ) where
 
 import Foreign.Ptr
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -30,10 +30,10 @@ data PointParameter =
 
 marshalPointParameter :: PointParameter -> GLenum
 marshalPointParameter x = case x of
-   PointSizeMin -> gl_POINT_SIZE_MIN
-   PointSizeMax -> gl_POINT_SIZE_MAX
-   PointFadeThresholdSize -> gl_POINT_FADE_THRESHOLD_SIZE
-   PointDistanceAttenuation -> gl_POINT_DISTANCE_ATTENUATION
+   PointSizeMin -> GL_POINT_SIZE_MIN
+   PointSizeMax -> GL_POINT_SIZE_MAX
+   PointFadeThresholdSize -> GL_POINT_FADE_THRESHOLD_SIZE
+   PointDistanceAttenuation -> GL_POINT_DISTANCE_ATTENUATION
 
 --------------------------------------------------------------------------------
 

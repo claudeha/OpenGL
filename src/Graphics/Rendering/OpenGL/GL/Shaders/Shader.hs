@@ -2,7 +2,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Shaders.Shader
--- Copyright   :  (c) Sven Panne 2013
+-- Copyright   :  (c) Sven Panne 2019
 -- License     :  BSD3
 -- 
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -17,9 +17,12 @@ module Graphics.Rendering.OpenGL.GL.Shaders.Shader (
    Shader(..)
 ) where
 
+import Control.Monad.IO.Class
+import Data.ObjectName
+import Graphics.Rendering.OpenGL.GL.DebugOutput
 import Graphics.Rendering.OpenGL.GL.GLboolean
-import Graphics.Rendering.OpenGL.GL.ObjectName
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.Rendering.OpenGL.GL.QueryUtils
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -27,5 +30,8 @@ newtype Shader = Shader { shaderID :: GLuint }
    deriving ( Eq, Ord, Show )
 
 instance ObjectName Shader where
-   isObjectName = fmap unmarshalGLboolean . glIsShader . shaderID
-   deleteObjectName = glDeleteShader . shaderID
+   isObjectName = liftIO . fmap unmarshalGLboolean . glIsShader . shaderID
+   deleteObjectName = liftIO . glDeleteShader . shaderID
+
+instance CanBeLabeled Shader where
+   objectLabel = objectNameLabel GL_SHADER . shaderID

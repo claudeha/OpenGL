@@ -1,7 +1,8 @@
+{-# LANGUAGE CPP #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.StringQueries
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 -- 
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -14,34 +15,42 @@
 --------------------------------------------------------------------------------
 
 module Graphics.Rendering.OpenGL.GL.StringQueries (
-   vendor, renderer, glVersion, glExtensions, shadingLanguageVersion,
-   majorMinor, ContextProfile'(..), contextProfile
+   vendor, renderer, glVersion, glExtensions, extensionSupported,
+   shadingLanguageVersion, majorMinor, ContextProfile'(..), contextProfile
 ) where
 
 import Data.Bits
 import Data.Char
-import Foreign.C.String
-import Foreign.Ptr
+#if !MIN_VERSION_base(4,8,0)
+import Data.Functor( (<$>), (<$) )
+#endif
+import Data.Set ( member, toList )
+import Data.StateVar as S
+import Graphics.Rendering.OpenGL.GL.ByteString
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
+import Text.ParserCombinators.ReadP as R
 
 --------------------------------------------------------------------------------
 
 vendor :: GettableStateVar String
-vendor = makeGettableStateVar (getString gl_VENDOR)
+vendor = makeStringVar GL_VENDOR
 
 renderer :: GettableStateVar String
-renderer = makeGettableStateVar (getString gl_RENDERER)
+renderer = makeStringVar GL_RENDERER
 
 glVersion :: GettableStateVar String
-glVersion = makeGettableStateVar (getString gl_VERSION)
+glVersion = makeStringVar GL_VERSION
 
 glExtensions :: GettableStateVar [String]
-glExtensions = makeGettableStateVar (fmap words $ getString gl_EXTENSIONS)
+glExtensions = makeGettableStateVar (toList <$> getExtensions)
+
+extensionSupported :: String -> GettableStateVar Bool
+extensionSupported ext =
+  makeGettableStateVar (getExtensions >>= (return . member ext))
 
 shadingLanguageVersion :: GettableStateVar String
-shadingLanguageVersion = makeGettableStateVar (getString gl_SHADING_LANGUAGE_VERSION)
+shadingLanguageVersion = makeStringVar GL_SHADING_LANGUAGE_VERSION
 
 --------------------------------------------------------------------------------
 
@@ -52,8 +61,8 @@ data ContextProfile'
 
 marshalContextProfile' :: ContextProfile' -> GLbitfield
 marshalContextProfile' x = case x of
-   CoreProfile' -> gl_CONTEXT_CORE_PROFILE_BIT
-   CompatibilityProfile' -> gl_CONTEXT_COMPATIBILITY_PROFILE_BIT
+   CoreProfile' -> GL_CONTEXT_CORE_PROFILE_BIT
+   CompatibilityProfile' -> GL_CONTEXT_COMPATIBILITY_PROFILE_BIT
 
 contextProfile :: GettableStateVar [ContextProfile']
 contextProfile = makeGettableStateVar (getInteger1 i2cps GetContextProfileMask)
@@ -65,8 +74,8 @@ i2cps bitfield =
 
 --------------------------------------------------------------------------------
 
-getString :: GLenum -> IO String
-getString n = glGetString n >>= maybeNullPtr (return "") (peekCString . castPtr)
+makeStringVar :: GLenum -> GettableStateVar String
+makeStringVar = makeGettableStateVar . getStringWith . glGetString
 
 --------------------------------------------------------------------------------
 
@@ -77,12 +86,30 @@ getString n = glGetString n >>= maybeNullPtr (return "") (peekCString . castPtr)
 -- with a sane OpenGL implementation, it is transformed to @(-1,-1)@.
 
 majorMinor :: GettableStateVar String -> GettableStateVar (Int, Int)
-majorMinor = makeGettableStateVar . fmap parse . get
-   where defaultVersion = (-1, -1)
-         parse str =
-            case span isDigit str of
-               (major@(_:_), '.':rest) ->
-                  case span isDigit rest of
-                     (minor@(_:_), _) -> (read major, read minor)
-                     _ -> defaultVersion
-               _ -> defaultVersion
+majorMinor =
+  makeGettableStateVar . (runParser parseVersion (-1, -1) <$>) . S.get
+
+--------------------------------------------------------------------------------
+-- Copy from Graphics.Rendering.OpenGL.Raw.GetProcAddress... :-/
+
+runParser :: ReadP a -> a -> String -> a
+runParser parser failed str =
+  case readP_to_S parser str of
+    [(v, "")] -> v
+    _ -> failed
+
+-- This does quite a bit more than we need for "normal" OpenGL, but at least it
+-- documents the convoluted format of the version string in detail.
+parseVersion :: ReadP (Int, Int)
+parseVersion = do
+  _prefix <-
+    -- Too lazy to define a type for the API...
+    ("CL" <$ string "OpenGL ES-CL ") <++  -- OpenGL ES 1.x Common-Lite
+    ("CM" <$ string "OpenGL ES-CM ") <++  -- OpenGL ES 1.x Common
+    ("ES" <$ string "OpenGL ES "   ) <++  -- OpenGL ES 2.x or 3.x
+    ("GL" <$ string ""             )      -- OpenGL
+  major <- read <$> munch1 isDigit
+  minor <- char '.' >> read <$> munch1 isDigit
+  _release <- (char '.' >> munch1 (/= ' ')) <++ return ""
+  _vendorStuff <- (char ' ' >> R.get `manyTill` eof) <++ ("" <$ eof)
+  return (major, minor)

@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Shaders.Limits
--- Copyright   :  (c) Sven Panne 2006-2013
+-- Copyright   :  (c) Sven Panne 2006-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -18,9 +18,9 @@ module Graphics.Rendering.OpenGL.GL.Shaders.Limits (
    maxFragmentUniformComponents, maxVertexAttribs, maxVaryingFloats
 ) where
 
-import Graphics.Rendering.OpenGL.GL.StateVar
+import Data.StateVar
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 -----------------------------------------------------------------------------
 

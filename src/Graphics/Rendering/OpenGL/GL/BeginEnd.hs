@@ -1,9 +1,9 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.BeginEnd
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
--- 
+--
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
 -- Stability   :  stable
 -- Portability :  portable
@@ -15,7 +15,6 @@
 
 module Graphics.Rendering.OpenGL.GL.BeginEnd (
    -- * Begin and End Objects
-   PrimitiveMode(..),
    renderPrimitive, unsafeRenderPrimitive, primitiveRestart,
 
    -- * Polygon Edges
@@ -23,12 +22,13 @@ module Graphics.Rendering.OpenGL.GL.BeginEnd (
    edgeFlag
 ) where
 
-import Graphics.Rendering.OpenGL.GL.StateVar
+import Data.StateVar
 import Graphics.Rendering.OpenGL.GL.EdgeFlag
 import Graphics.Rendering.OpenGL.GL.Exception
 import Graphics.Rendering.OpenGL.GL.PrimitiveMode
+import Graphics.Rendering.OpenGL.GL.PrimitiveModeInternal
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -104,7 +104,7 @@ renderPrim brack_ beginMode =
 --------------------------------------------------------------------------------
 
 primitiveRestart :: IO ()
-primitiveRestart = glPrimitiveRestart
+primitiveRestart = glPrimitiveRestartNV
 
 --------------------------------------------------------------------------------
 

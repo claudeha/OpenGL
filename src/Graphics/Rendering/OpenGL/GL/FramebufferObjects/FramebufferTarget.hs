@@ -2,14 +2,14 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.FramebufferObjects.FramebufferTarget
--- Copyright   :  (c) Sven Panne 2013
+-- Copyright   :  (c) Sven Panne 2013-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
 -- Stability   :  stable
 -- Portability :  portable
 --
--- This is a purely internal module for marshaling FrameBufferTargets.
+-- This is a purely internal module for marshaling FramebufferTargets.
 --
 --------------------------------------------------------------------------------
 
@@ -17,7 +17,7 @@ module Graphics.Rendering.OpenGL.GL.FramebufferObjects.FramebufferTarget (
    FramebufferTarget(..), marshalFramebufferTarget
 ) where
 
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -29,6 +29,6 @@ data FramebufferTarget =
 
 marshalFramebufferTarget :: FramebufferTarget -> GLenum
 marshalFramebufferTarget xs = case xs of
-   DrawFramebuffer -> gl_DRAW_FRAMEBUFFER
-   ReadFramebuffer -> gl_READ_FRAMEBUFFER
-   Framebuffer -> gl_FRAMEBUFFER
+   DrawFramebuffer -> GL_DRAW_FRAMEBUFFER
+   ReadFramebuffer -> GL_READ_FRAMEBUFFER
+   Framebuffer -> GL_FRAMEBUFFER

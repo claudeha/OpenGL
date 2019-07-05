@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Shaders.ShaderBinaries
--- Copyright   :  (c) Sven Panne 2006-2013
+-- Copyright   :  (c) Sven Panne 2006-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -18,12 +18,12 @@ module Graphics.Rendering.OpenGL.GL.Shaders.ShaderBinaries (
    ShaderBinary(..), shaderBinary,
 ) where
 
+import Data.StateVar
 import Foreign.Marshal.Array
 import Graphics.Rendering.OpenGL.GL.ByteString
 import Graphics.Rendering.OpenGL.GL.QueryUtils
 import Graphics.Rendering.OpenGL.GL.Shaders.Shader
-import Graphics.Rendering.OpenGL.GL.StateVar
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 

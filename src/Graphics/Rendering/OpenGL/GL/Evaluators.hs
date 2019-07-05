@@ -2,7 +2,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Evaluators
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -46,6 +46,7 @@ module Graphics.Rendering.OpenGL.GL.Evaluators (
 
 import Control.Monad
 import Data.List
+import Data.StateVar
 import Foreign.ForeignPtr
 import Foreign.Marshal.Array
 import Foreign.Marshal.Utils
@@ -57,9 +58,8 @@ import Graphics.Rendering.OpenGL.GL.Domain
 import Graphics.Rendering.OpenGL.GL.PeekPoke
 import Graphics.Rendering.OpenGL.GL.PolygonMode
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.VertexArrays
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -74,11 +74,11 @@ data MapDescriptor d =
    MapDescriptor (d, d) Stride Order NumComponents
    deriving ( Eq, Ord, Show )
 
-totalComponents1 :: Domain d => MapDescriptor d -> Int
+totalComponents1 :: MapDescriptor d -> Int
 totalComponents1 (MapDescriptor _ stride order numComp) =
    fromIntegral stride * (fromIntegral order - 1) + fromIntegral numComp
 
-totalComponents2 :: Domain d => MapDescriptor d -> MapDescriptor d -> Int
+totalComponents2 :: MapDescriptor d -> MapDescriptor d -> Int
 totalComponents2 uDescriptor vDescriptor@(MapDescriptor _ _ _ numComp) =
    totalComponents1 uDescriptor + totalComponents1 vDescriptor - fromIntegral numComp
 
@@ -323,9 +323,9 @@ data GetMapQuery =
 
 marshalGetMapQuery :: GetMapQuery -> GLenum
 marshalGetMapQuery x = case x of
-   Coeff -> gl_COEFF
-   Order -> gl_ORDER
-   Domain -> gl_DOMAIN
+   Coeff -> GL_COEFF
+   Order -> GL_ORDER
+   Domain -> GL_DOMAIN
 
 --------------------------------------------------------------------------------
 

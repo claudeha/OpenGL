@@ -1,9 +1,9 @@
-{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable, CPP #-}
 {-# OPTIONS_HADDOCK hide #-}
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.VertexAttributes
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 -- 
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -22,7 +22,9 @@ module Graphics.Rendering.OpenGL.GL.VertexAttributes (
    Index1(..)
 ) where
 
-import Control.Applicative
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative ( Applicative(..) )
+#endif
 import Control.Monad
 import Data.Foldable
 import Data.Ix

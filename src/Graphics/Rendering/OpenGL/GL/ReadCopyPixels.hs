@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.ReadCopyPixels
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -24,14 +24,14 @@ module Graphics.Rendering.OpenGL.GL.ReadCopyPixels (
    BlitBuffer(..), blitFramebuffer
 ) where
 
+import Data.StateVar
 import Graphics.Rendering.OpenGL.GL.BufferMode
 import Graphics.Rendering.OpenGL.GL.CoordTrans
 import Graphics.Rendering.OpenGL.GL.PixelData
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.Texturing.Filter
 import Graphics.Rendering.OpenGL.GLU.ErrorsInternal
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -57,9 +57,9 @@ data PixelCopyType =
 
 marshalPixelCopyType :: PixelCopyType -> GLenum
 marshalPixelCopyType x = case x of
-   CopyColor -> gl_COLOR
-   CopyDepth -> gl_DEPTH
-   CopyStencil -> gl_STENCIL
+   CopyColor -> GL_COLOR
+   CopyDepth -> GL_DEPTH
+   CopyStencil -> GL_STENCIL
 
 --------------------------------------------------------------------------------
 
@@ -79,9 +79,9 @@ data BlitBuffer =
 
 marshalBlitBuffer :: BlitBuffer -> GLbitfield
 marshalBlitBuffer x = case x of
-   ColorBuffer' -> gl_COLOR_BUFFER_BIT
-   StencilBuffer' -> gl_STENCIL_BUFFER_BIT
-   DepthBuffer' -> gl_DEPTH_BUFFER_BIT
+   ColorBuffer' -> GL_COLOR_BUFFER_BIT
+   StencilBuffer' -> GL_STENCIL_BUFFER_BIT
+   DepthBuffer' -> GL_DEPTH_BUFFER_BIT
 
 --------------------------------------------------------------------------------
 

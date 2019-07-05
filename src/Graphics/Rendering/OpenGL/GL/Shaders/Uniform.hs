@@ -1,7 +1,8 @@
+{-# LANGUAGE TypeSynonymInstances #-}
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Shaders.Uniform
--- Copyright   :  (c) Sven Panne 2006-2013
+-- Copyright   :  (c) Sven Panne 2006-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -13,8 +14,6 @@
 --
 -----------------------------------------------------------------------------
 
-{-# LANGUAGE TypeSynonymInstances #-}
-
 module Graphics.Rendering.OpenGL.GL.Shaders.Uniform (
    -- * Uniform variables
    UniformLocation(..), uniformLocation, activeUniforms, Uniform(..),
@@ -24,17 +23,20 @@ module Graphics.Rendering.OpenGL.GL.Shaders.Uniform (
 ) where
 
 import Data.Maybe
+import Data.StateVar
 import Foreign.Marshal.Alloc
 import Foreign.Ptr
 import Foreign.Storable
 import Graphics.Rendering.OpenGL.GL.ByteString
+import Graphics.Rendering.OpenGL.GL.CoordTrans
+import Graphics.Rendering.OpenGL.GL.GLboolean
+import Graphics.Rendering.OpenGL.GL.MatrixComponent
 import Graphics.Rendering.OpenGL.GL.Shaders.Program
 import Graphics.Rendering.OpenGL.GL.Shaders.ProgramObjects
 import Graphics.Rendering.OpenGL.GL.Shaders.Variables
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.Tensor
 import Graphics.Rendering.OpenGL.GL.VertexSpec
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -74,7 +76,7 @@ class Storable a => UniformComponent a where
    uniform3 :: UniformLocation -> a -> a -> a -> IO ()
    uniform4 :: UniformLocation -> a -> a -> a -> a -> IO ()
 
-   getUniform :: Storable (b a) => Program -> UniformLocation -> Ptr (b a) -> IO ()
+   getUniform :: Storable (b a) => GLuint -> GLint -> Ptr (b a) -> IO ()
 
    uniform1v :: UniformLocation -> GLsizei -> Ptr a -> IO ()
    uniform2v :: UniformLocation -> GLsizei -> Ptr a -> IO ()
@@ -87,7 +89,7 @@ instance UniformComponent GLint where
    uniform3 (UniformLocation ul) = glUniform3i ul
    uniform4 (UniformLocation ul) = glUniform4i ul
 
-   getUniform (Program p) (UniformLocation ul) = glGetUniformiv p ul . castPtr
+   getUniform p ul = glGetUniformiv p ul . castPtr
 
    uniform1v (UniformLocation ul) = glUniform1iv ul
    uniform2v (UniformLocation ul) = glUniform2iv ul
@@ -100,7 +102,7 @@ instance UniformComponent GLuint where
    uniform3 (UniformLocation ul) = glUniform3ui ul
    uniform4 (UniformLocation ul) = glUniform4ui ul
 
-   getUniform (Program p) (UniformLocation ul) = glGetUniformuiv p ul . castPtr
+   getUniform p ul = glGetUniformuiv p ul . castPtr
 
    uniform1v (UniformLocation ul) = glUniform1uiv ul
    uniform2v (UniformLocation ul) = glUniform2uiv ul
@@ -113,12 +115,25 @@ instance UniformComponent GLfloat where
    uniform3 (UniformLocation ul) = glUniform3f ul
    uniform4 (UniformLocation ul) = glUniform4f ul
 
-   getUniform (Program p) (UniformLocation ul) = glGetUniformfv p ul . castPtr
+   getUniform p ul = glGetUniformfv p ul . castPtr
 
    uniform1v (UniformLocation ul) = glUniform1fv ul
    uniform2v (UniformLocation ul) = glUniform2fv ul
    uniform3v (UniformLocation ul) = glUniform3fv ul
    uniform4v (UniformLocation ul) = glUniform4fv ul
+
+instance UniformComponent GLdouble where
+   uniform1 (UniformLocation ul) = glUniform1d ul
+   uniform2 (UniformLocation ul) = glUniform2d ul
+   uniform3 (UniformLocation ul) = glUniform3d ul
+   uniform4 (UniformLocation ul) = glUniform4d ul
+
+   getUniform p ul = glGetUniformdv p ul . castPtr
+
+   uniform1v (UniformLocation ul) = glUniform1dv ul
+   uniform2v (UniformLocation ul) = glUniform2dv ul
+   uniform3v (UniformLocation ul) = glUniform3dv ul
+   uniform4v (UniformLocation ul) = glUniform4dv ul
 
 --------------------------------------------------------------------------------
 
@@ -139,10 +154,34 @@ makeUniformVar :: (UniformComponent a, Storable (b a))
                => (UniformLocation -> b a -> IO ())
                -> UniformLocation -> StateVar (b a)
 makeUniformVar setter location = makeStateVar getter (setter location)
-   where getter = do program <- fmap fromJust $ get currentProgram
-                     allocaBytes maxUniformBufferSize $ \buf -> do
-                        getUniform program location buf
-                        peek buf
+   where getter = allocaBytes maxUniformBufferSize $ \buf -> do
+                     getUniformWith getUniform location buf
+                     peek buf
+
+single :: (UniformLocation -> StateVar (Vertex1 a))
+       -> (UniformLocation -> StateVar a)
+single var location = makeStateVar (do Vertex1 x <- get (var location); return x)
+                                   (\x -> var location $= Vertex1 x)
+
+instance Uniform GLfloat where
+   uniform = single uniform
+   uniformv = uniform1v
+
+instance Uniform GLint where
+   uniform = single uniform
+   uniformv = uniform1v
+
+instance Uniform GLuint where
+   uniform = single uniform
+   uniformv = uniform1v
+
+instance Uniform GLdouble where
+   uniform = single uniform
+   uniformv = uniform1v
+
+instance UniformComponent a => Uniform (Vertex1 a) where
+   uniform = makeUniformVar $ \location (Vertex1 x) -> uniform1 location x
+   uniformv location count = uniform1v location count . (castPtr :: Ptr (Vertex1 b) -> Ptr b)
 
 instance UniformComponent a => Uniform (Vertex2 a) where
    uniform = makeUniformVar $ \location (Vertex2 x y) -> uniform2 location x y
@@ -155,6 +194,22 @@ instance UniformComponent a => Uniform (Vertex3 a) where
 instance UniformComponent a => Uniform (Vertex4 a) where
    uniform = makeUniformVar $ \location (Vertex4 x y z w) -> uniform4 location x y z w
    uniformv location count = uniform4v location count . (castPtr :: Ptr (Vertex4 b) -> Ptr b)
+
+instance UniformComponent a => Uniform (Vector1 a) where
+   uniform = makeUniformVar $ \location (Vector1 x) -> uniform1 location x
+   uniformv location count = uniform1v location count . (castPtr :: Ptr (Vector1 b) -> Ptr b)
+
+instance UniformComponent a => Uniform (Vector2 a) where
+   uniform = makeUniformVar $ \location (Vector2 x y) -> uniform2 location x y
+   uniformv location count = uniform2v location count . (castPtr :: Ptr (Vector2 b) -> Ptr b)
+
+instance UniformComponent a => Uniform (Vector3 a) where
+   uniform = makeUniformVar $ \location (Vector3 x y z) -> uniform3 location x y z
+   uniformv location count = uniform3v location count . (castPtr :: Ptr (Vector3 b) -> Ptr b)
+
+instance UniformComponent a => Uniform (Vector4 a) where
+   uniform = makeUniformVar $ \location (Vector4 x y z w) -> uniform4 location x y z w
+   uniformv location count = uniform4v location count . (castPtr :: Ptr (Vector4 b) -> Ptr b)
 
 instance UniformComponent a => Uniform (TexCoord1 a) where
    uniform = makeUniformVar $ \location (TexCoord1 s) -> uniform1 location s
@@ -196,13 +251,28 @@ instance UniformComponent a => Uniform (Index1 a) where
 -- getUniform. Even worse is that it requires the `GLint` uniforms while it is an enum or
 -- uint.
 instance Uniform TextureUnit where
-    uniform loc@(UniformLocation ul)  = makeStateVar getter setter
-        where setter (TextureUnit tu) = uniform1 loc (fromIntegral tu :: GLint)
-              getter = do program <- fmap fromJust $ get currentProgram
-                          allocaBytes (sizeOf (undefined :: GLint))  $ \buf -> do
-                             glGetUniformiv (programID program) ul buf
-                             tuID <- peek buf
-                             return . TextureUnit $ fromIntegral tuID
+    uniform loc = makeStateVar getter setter
+        where getter = allocaBytes (sizeOf (undefined :: GLint))  $ \buf -> do
+                          getUniformWith glGetUniformiv loc buf
+                          fmap (TextureUnit . fromIntegral) $ peek buf
+              setter (TextureUnit tu) = uniform1 loc (fromIntegral tu :: GLint)
     uniformv location count = uniform1v location count . (castPtr :: Ptr TextureUnit -> Ptr GLint)
+
+-- | Note: 'uniformv' expects all matrices to be in 'ColumnMajor' form.
+instance MatrixComponent a => Uniform (GLmatrix a) where
+   uniform loc@(UniformLocation ul) = makeStateVar getter setter
+      where getter = withNewMatrix ColumnMajor $ getUniformWith getUniformv loc
+            setter m = withMatrix m $ uniformMatrix4v ul 1 . isRowMajor
+   uniformv (UniformLocation ul) count buf =
+      uniformMatrix4v ul count (marshalGLboolean False) (castPtr buf `asTypeOf` elemType buf)
+      where elemType = undefined :: MatrixComponent c => Ptr (GLmatrix c) -> Ptr c
+
+isRowMajor :: MatrixOrder -> GLboolean
+isRowMajor = marshalGLboolean . (RowMajor ==)
+
+getUniformWith :: (GLuint -> GLint -> Ptr a -> IO ()) -> UniformLocation -> Ptr a -> IO ()
+getUniformWith getter (UniformLocation ul) buf = do
+   program <- fmap (programID . fromJust) $ get currentProgram
+   getter program ul buf
 
 --------------------------------------------------------------------------------

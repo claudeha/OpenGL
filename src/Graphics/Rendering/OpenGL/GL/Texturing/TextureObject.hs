@@ -2,7 +2,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Texturing.TextureObject
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -17,10 +17,13 @@ module Graphics.Rendering.OpenGL.GL.Texturing.TextureObject (
    TextureObject(..)
 ) where
 
-import Foreign.Marshal.Array
+import Control.Monad.IO.Class
+import Data.ObjectName
+import Foreign.Marshal.Array ( allocaArray, peekArray, withArrayLen )
+import Graphics.Rendering.OpenGL.GL.DebugOutput
 import Graphics.Rendering.OpenGL.GL.GLboolean
-import Graphics.Rendering.OpenGL.GL.ObjectName
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.Rendering.OpenGL.GL.QueryUtils
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -30,14 +33,17 @@ newtype TextureObject = TextureObject { textureID :: GLuint }
 --------------------------------------------------------------------------------
 
 instance ObjectName TextureObject where
-   isObjectName = fmap unmarshalGLboolean . glIsTexture . textureID
+   isObjectName = liftIO . fmap unmarshalGLboolean . glIsTexture . textureID
 
    deleteObjectNames textureObjects =
-      withArrayLen (map textureID textureObjects) $
+      liftIO . withArrayLen (map textureID textureObjects) $
          glDeleteTextures . fromIntegral
 
 instance GeneratableObjectName TextureObject where
    genObjectNames n =
-      allocaArray n $ \buf -> do
+      liftIO . allocaArray n $ \buf -> do
         glGenTextures (fromIntegral n) buf
         fmap (map TextureObject) $ peekArray n buf
+
+instance CanBeLabeled TextureObject where
+   objectLabel = objectNameLabel GL_TEXTURE . textureID

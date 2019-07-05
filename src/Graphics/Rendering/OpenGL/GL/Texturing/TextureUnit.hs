@@ -2,7 +2,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Texturing.TextureUnit
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -19,7 +19,7 @@ module Graphics.Rendering.OpenGL.GL.Texturing.TextureUnit (
 
 import Foreign.Ptr
 import Foreign.Storable
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -44,7 +44,7 @@ instance Storable TextureUnit where
 
 
 marshalTextureUnit :: TextureUnit -> GLenum
-marshalTextureUnit (TextureUnit x) = gl_TEXTURE0 + fromIntegral x
+marshalTextureUnit (TextureUnit x) = GL_TEXTURE0 + fromIntegral x
 
 unmarshalTextureUnit :: GLenum -> TextureUnit
-unmarshalTextureUnit x = TextureUnit (fromIntegral (x - gl_TEXTURE0))
+unmarshalTextureUnit x = TextureUnit (fromIntegral (x - GL_TEXTURE0))

@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.BufferObjects
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -41,20 +41,21 @@ module Graphics.Rendering.OpenGL.GL.BufferObjects (
    indexedBufferStart, indexedBufferSize
 ) where
 
-import Data.Maybe
-import Foreign.Marshal.Array
-import Foreign.Marshal.Utils
-import Foreign.Ptr
-import Foreign.Storable
+import Control.Monad.IO.Class
+import Data.Maybe ( fromMaybe )
+import Data.ObjectName
+import Data.StateVar
+import Foreign.Marshal.Array ( allocaArray, peekArray, withArrayLen )
+import Foreign.Marshal.Utils ( with )
+import Foreign.Ptr ( Ptr, nullPtr )
+import Graphics.Rendering.OpenGL.GL.DebugOutput
 import Graphics.Rendering.OpenGL.GL.Exception
 import Graphics.Rendering.OpenGL.GL.GLboolean
-import Graphics.Rendering.OpenGL.GL.ObjectName
 import Graphics.Rendering.OpenGL.GL.PeekPoke
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.VertexArrays
 import Graphics.Rendering.OpenGL.GLU.ErrorsInternal
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -64,17 +65,20 @@ newtype BufferObject = BufferObject { bufferID :: GLuint }
 --------------------------------------------------------------------------------
 
 instance ObjectName BufferObject where
-   isObjectName = fmap unmarshalGLboolean . glIsBuffer . bufferID
+   isObjectName = liftIO . fmap unmarshalGLboolean . glIsBuffer . bufferID
 
    deleteObjectNames bufferObjects =
-      withArrayLen (map bufferID bufferObjects) $
+      liftIO . withArrayLen (map bufferID bufferObjects) $
          glDeleteBuffers . fromIntegral
 
 instance GeneratableObjectName BufferObject where
    genObjectNames n =
-      allocaArray n $ \buf -> do
+      liftIO . allocaArray n $ \buf -> do
         glGenBuffers (fromIntegral n) buf
         fmap (map BufferObject) $ peekArray n buf
+
+instance CanBeLabeled BufferObject where
+   objectLabel = objectNameLabel GL_BUFFER . bufferID
 
 --------------------------------------------------------------------------------
 
@@ -97,20 +101,20 @@ data BufferTarget =
 
 marshalBufferTarget :: BufferTarget -> GLenum
 marshalBufferTarget x = case x of
-   ArrayBuffer -> gl_ARRAY_BUFFER
-   AtomicCounterBuffer -> gl_ATOMIC_COUNTER_BUFFER
-   CopyReadBuffer -> gl_COPY_READ_BUFFER
-   CopyWriteBuffer -> gl_COPY_WRITE_BUFFER
-   DispatchIndirectBuffer -> gl_DISPATCH_INDIRECT_BUFFER
-   DrawIndirectBuffer -> gl_DRAW_INDIRECT_BUFFER
-   ElementArrayBuffer -> gl_ELEMENT_ARRAY_BUFFER
-   PixelPackBuffer -> gl_PIXEL_PACK_BUFFER
-   PixelUnpackBuffer -> gl_PIXEL_UNPACK_BUFFER
-   QueryBuffer -> gl_QUERY_BUFFER
-   ShaderStorageBuffer -> gl_SHADER_STORAGE_BUFFER
-   TextureBuffer -> gl_TEXTURE_BUFFER
-   TransformFeedbackBuffer -> gl_TRANSFORM_FEEDBACK_BUFFER
-   UniformBuffer -> gl_UNIFORM_BUFFER
+   ArrayBuffer -> GL_ARRAY_BUFFER
+   AtomicCounterBuffer -> GL_ATOMIC_COUNTER_BUFFER
+   CopyReadBuffer -> GL_COPY_READ_BUFFER
+   CopyWriteBuffer -> GL_COPY_WRITE_BUFFER
+   DispatchIndirectBuffer -> GL_DISPATCH_INDIRECT_BUFFER
+   DrawIndirectBuffer -> GL_DRAW_INDIRECT_BUFFER
+   ElementArrayBuffer -> GL_ELEMENT_ARRAY_BUFFER
+   PixelPackBuffer -> GL_PIXEL_PACK_BUFFER
+   PixelUnpackBuffer -> GL_PIXEL_UNPACK_BUFFER
+   QueryBuffer -> GL_QUERY_BUFFER
+   ShaderStorageBuffer -> GL_SHADER_STORAGE_BUFFER
+   TextureBuffer -> GL_TEXTURE_BUFFER
+   TransformFeedbackBuffer -> GL_TRANSFORM_FEEDBACK_BUFFER
+   UniformBuffer -> GL_UNIFORM_BUFFER
 
 bufferTargetToGetPName :: BufferTarget -> PName1I
 bufferTargetToGetPName x = case x of
@@ -145,27 +149,27 @@ data BufferUsage =
 
 marshalBufferUsage :: BufferUsage -> GLenum
 marshalBufferUsage x = case x of
-   StreamDraw -> gl_STREAM_DRAW
-   StreamRead -> gl_STREAM_READ
-   StreamCopy -> gl_STREAM_COPY
-   StaticDraw -> gl_STATIC_DRAW
-   StaticRead -> gl_STATIC_READ
-   StaticCopy -> gl_STATIC_COPY
-   DynamicDraw -> gl_DYNAMIC_DRAW
-   DynamicRead -> gl_DYNAMIC_READ
-   DynamicCopy -> gl_DYNAMIC_COPY
+   StreamDraw -> GL_STREAM_DRAW
+   StreamRead -> GL_STREAM_READ
+   StreamCopy -> GL_STREAM_COPY
+   StaticDraw -> GL_STATIC_DRAW
+   StaticRead -> GL_STATIC_READ
+   StaticCopy -> GL_STATIC_COPY
+   DynamicDraw -> GL_DYNAMIC_DRAW
+   DynamicRead -> GL_DYNAMIC_READ
+   DynamicCopy -> GL_DYNAMIC_COPY
 
 unmarshalBufferUsage :: GLenum -> BufferUsage
 unmarshalBufferUsage x
-   | x == gl_STREAM_DRAW = StreamDraw
-   | x == gl_STREAM_READ = StreamRead
-   | x == gl_STREAM_COPY = StreamCopy
-   | x == gl_STATIC_DRAW = StaticDraw
-   | x == gl_STATIC_READ = StaticRead
-   | x == gl_STATIC_COPY = StaticCopy
-   | x == gl_DYNAMIC_DRAW = DynamicDraw
-   | x == gl_DYNAMIC_READ = DynamicRead
-   | x == gl_DYNAMIC_COPY = DynamicCopy
+   | x == GL_STREAM_DRAW = StreamDraw
+   | x == GL_STREAM_READ = StreamRead
+   | x == GL_STREAM_COPY = StreamCopy
+   | x == GL_STATIC_DRAW = StaticDraw
+   | x == GL_STATIC_READ = StaticRead
+   | x == GL_STATIC_COPY = StaticCopy
+   | x == GL_DYNAMIC_DRAW = DynamicDraw
+   | x == GL_DYNAMIC_READ = DynamicRead
+   | x == GL_DYNAMIC_COPY = DynamicCopy
    | otherwise = error ("unmarshalBufferUsage: illegal value " ++ show x)
 
 --------------------------------------------------------------------------------
@@ -178,15 +182,15 @@ data BufferAccess =
 
 marshalBufferAccess :: BufferAccess -> GLenum
 marshalBufferAccess x = case x of
-   ReadOnly -> gl_READ_ONLY
-   WriteOnly -> gl_WRITE_ONLY
-   ReadWrite -> gl_READ_WRITE
+   ReadOnly -> GL_READ_ONLY
+   WriteOnly -> GL_WRITE_ONLY
+   ReadWrite -> GL_READ_WRITE
 
 unmarshalBufferAccess :: GLenum -> BufferAccess
 unmarshalBufferAccess x
-   | x == gl_READ_ONLY = ReadOnly
-   | x == gl_WRITE_ONLY = WriteOnly
-   | x == gl_READ_WRITE = ReadWrite
+   | x == GL_READ_ONLY = ReadOnly
+   | x == GL_WRITE_ONLY = WriteOnly
+   | x == GL_READ_WRITE = ReadWrite
    | otherwise = error ("unmarshalBufferAccess: illegal value " ++ show x)
 
 --------------------------------------------------------------------------------
@@ -272,10 +276,10 @@ data GetBufferPName =
 
 marshalGetBufferPName :: GetBufferPName -> GLenum
 marshalGetBufferPName x = case x of
-   GetBufferSize -> gl_BUFFER_SIZE
-   GetBufferUsage -> gl_BUFFER_USAGE
-   GetBufferAccess -> gl_BUFFER_ACCESS
-   GetBufferMapped -> gl_BUFFER_MAPPED
+   GetBufferSize -> GL_BUFFER_SIZE
+   GetBufferUsage -> GL_BUFFER_USAGE
+   GetBufferAccess -> GL_BUFFER_ACCESS
+   GetBufferMapped -> GL_BUFFER_MAPPED
 
 getBufferParameter :: BufferTarget -> (GLenum -> a) -> GetBufferPName -> IO a
 getBufferParameter t f p = with 0 $ \buf -> do
@@ -287,8 +291,8 @@ getBufferParameter t f p = with 0 $ \buf -> do
 
 getBufferPointer :: BufferTarget -> IO (Ptr a)
 getBufferPointer t = with nullPtr $ \buf -> do
-   glGetBufferPointerv (marshalBufferTarget t) gl_BUFFER_MAP_POINTER buf
-   peek buf
+   glGetBufferPointerv (marshalBufferTarget t) GL_BUFFER_MAP_POINTER buf
+   peek1 id buf
 
 --------------------------------------------------------------------------------
 
@@ -342,12 +346,12 @@ type Length = GLsizeiptr
 
 marshalMapBufferUsage :: MapBufferUsage -> GLbitfield
 marshalMapBufferUsage x = case x of
-    Read -> gl_MAP_READ_BIT
-    Write -> gl_MAP_WRITE_BIT
-    InvalidateRange -> gl_MAP_INVALIDATE_RANGE_BIT
-    InvalidateBuffer -> gl_MAP_INVALIDATE_BUFFER_BIT
-    FlushExplicit -> gl_MAP_FLUSH_EXPLICIT_BIT
-    Unsychronized -> gl_MAP_FLUSH_EXPLICIT_BIT
+    Read -> GL_MAP_READ_BIT
+    Write -> GL_MAP_WRITE_BIT
+    InvalidateRange -> GL_MAP_INVALIDATE_RANGE_BIT
+    InvalidateBuffer -> GL_MAP_INVALIDATE_BUFFER_BIT
+    FlushExplicit -> GL_MAP_FLUSH_EXPLICIT_BIT
+    Unsychronized -> GL_MAP_FLUSH_EXPLICIT_BIT
 
 --------------------------------------------------------------------------------
 

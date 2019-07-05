@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.PixelRectangles.Minmax
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -17,15 +17,15 @@ module Graphics.Rendering.OpenGL.GL.PixelRectangles.Minmax (
    minmax, getMinmax, resetMinmax
 ) where
 
+import Data.StateVar
 import Foreign.Marshal.Utils
 import Graphics.Rendering.OpenGL.GL.Capability
 import Graphics.Rendering.OpenGL.GL.PeekPoke
 import Graphics.Rendering.OpenGL.GL.PixelData
 import Graphics.Rendering.OpenGL.GL.PixelRectangles.Reset
 import Graphics.Rendering.OpenGL.GL.PixelRectangles.Sink
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.Texturing.PixelInternalFormat
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ data MinmaxTarget =
 
 marshalMinmaxTarget :: MinmaxTarget -> GLenum
 marshalMinmaxTarget x = case x of
-   Minmax -> gl_MINMAX
+   Minmax -> GL_MINMAX
 
 --------------------------------------------------------------------------------
 
@@ -74,8 +74,8 @@ data GetMinmaxParameterPName =
 
 marshalGetMinmaxParameterPName :: GetMinmaxParameterPName -> GLenum
 marshalGetMinmaxParameterPName x = case x of
-   MinmaxFormat -> gl_MINMAX_FORMAT
-   MinmaxSink -> gl_MINMAX_SINK
+   MinmaxFormat -> GL_MINMAX_FORMAT
+   MinmaxSink -> GL_MINMAX_SINK
 
 --------------------------------------------------------------------------------
 

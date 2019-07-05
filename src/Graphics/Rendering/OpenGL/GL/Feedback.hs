@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Feedback
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -18,15 +18,15 @@ module Graphics.Rendering.OpenGL.GL.Feedback (
 ) where
 
 import Control.Monad
+import Data.StateVar
 import Foreign.Marshal.Array
 import Foreign.Ptr
 import Foreign.Storable
 import Graphics.Rendering.OpenGL.GL.IOState
 import Graphics.Rendering.OpenGL.GL.RenderMode
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.Tensor
 import Graphics.Rendering.OpenGL.GL.VertexSpec
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -65,14 +65,14 @@ data FeedbackTag =
 
 unmarshalFeedbackTag :: GLenum -> FeedbackTag
 unmarshalFeedbackTag x
-   | x == gl_POINT_TOKEN = PointTag
-   | x == gl_LINE_TOKEN = LineTag
-   | x == gl_LINE_RESET_TOKEN = LineResetTag
-   | x == gl_POLYGON_TOKEN = PolygonTag
-   | x == gl_BITMAP_TOKEN = BitmapTag
-   | x == gl_DRAW_PIXEL_TOKEN = DrawPixelTag
-   | x == gl_COPY_PIXEL_TOKEN = CopyPixelTag
-   | x == gl_PASS_THROUGH_TOKEN = PassThroughTag
+   | x == GL_POINT_TOKEN = PointTag
+   | x == GL_LINE_TOKEN = LineTag
+   | x == GL_LINE_RESET_TOKEN = LineResetTag
+   | x == GL_POLYGON_TOKEN = PolygonTag
+   | x == GL_BITMAP_TOKEN = BitmapTag
+   | x == GL_DRAW_PIXEL_TOKEN = DrawPixelTag
+   | x == GL_COPY_PIXEL_TOKEN = CopyPixelTag
+   | x == GL_PASS_THROUGH_TOKEN = PassThroughTag
    | otherwise = error ("unmarshalFeedbackTag: illegal value " ++ show x)
 
 --------------------------------------------------------------------------------
@@ -87,11 +87,11 @@ data FeedbackType =
 
 marshalFeedbackType :: FeedbackType -> GLenum
 marshalFeedbackType x = case x of
-   TwoD -> gl_2D
-   ThreeD -> gl_3D
-   ThreeDColor -> gl_3D_COLOR
-   ThreeDColorTexture -> gl_3D_COLOR_TEXTURE
-   FourDColorTexture -> gl_4D_COLOR_TEXTURE
+   TwoD -> GL_2D
+   ThreeD -> GL_3D
+   ThreeDColor -> GL_3D_COLOR
+   ThreeDColorTexture -> GL_3D_COLOR_TEXTURE
+   FourDColorTexture -> GL_4D_COLOR_TEXTURE
 
 --------------------------------------------------------------------------------
 

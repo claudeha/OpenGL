@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.PixelRectangles.PixelMap
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -21,14 +21,14 @@ module Graphics.Rendering.OpenGL.GL.PixelRectangles.PixelMap (
 ) where
 
 import Data.List
+import Data.StateVar
 import Foreign.ForeignPtr
 import Foreign.Marshal.Array
 import Foreign.Ptr
 import Foreign.Storable
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.VertexSpec
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -47,16 +47,16 @@ data PixelMapTarget =
 
 marshalPixelMapTarget :: PixelMapTarget -> GLenum
 marshalPixelMapTarget x = case x of
-   IToI -> gl_PIXEL_MAP_I_TO_I
-   SToS -> gl_PIXEL_MAP_S_TO_S
-   IToR -> gl_PIXEL_MAP_I_TO_R
-   IToG -> gl_PIXEL_MAP_I_TO_G
-   IToB -> gl_PIXEL_MAP_I_TO_B
-   IToA -> gl_PIXEL_MAP_I_TO_A
-   RToR -> gl_PIXEL_MAP_R_TO_R
-   GToG -> gl_PIXEL_MAP_G_TO_G
-   BToB -> gl_PIXEL_MAP_B_TO_B
-   AToA -> gl_PIXEL_MAP_A_TO_A
+   IToI -> GL_PIXEL_MAP_I_TO_I
+   SToS -> GL_PIXEL_MAP_S_TO_S
+   IToR -> GL_PIXEL_MAP_I_TO_R
+   IToG -> GL_PIXEL_MAP_I_TO_G
+   IToB -> GL_PIXEL_MAP_I_TO_B
+   IToA -> GL_PIXEL_MAP_I_TO_A
+   RToR -> GL_PIXEL_MAP_R_TO_R
+   GToG -> GL_PIXEL_MAP_G_TO_G
+   BToB -> GL_PIXEL_MAP_B_TO_B
+   AToA -> GL_PIXEL_MAP_A_TO_A
 
 pixelMapTargetToGetPName :: PixelMapTarget -> PName1I
 pixelMapTargetToGetPName x = case x of

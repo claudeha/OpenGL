@@ -2,7 +2,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.FramebufferObjects.RenderbufferObject
--- Copyright   :  (c) Sven Panne 2013
+-- Copyright   :  (c) Sven Panne 2019
 -- License     :  BSD3
 -- 
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -17,25 +17,33 @@ module Graphics.Rendering.OpenGL.GL.FramebufferObjects.RenderbufferObject (
    RenderbufferObject(..)
 ) where
 
-import Foreign.Marshal
+
+import Control.Monad.IO.Class
+import Data.ObjectName
+import Foreign.Marshal ( allocaArray, peekArray, withArrayLen )
+import Graphics.Rendering.OpenGL.GL.DebugOutput
 import Graphics.Rendering.OpenGL.GL.GLboolean
-import Graphics.Rendering.OpenGL.GL.ObjectName
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.Rendering.OpenGL.GL.QueryUtils
+import Graphics.GL
        
 --------------------------------------------------------------------------------
 
-data RenderbufferObject = RenderbufferObject { renderbufferID :: GLuint}
+newtype RenderbufferObject = RenderbufferObject { renderbufferID :: GLuint}
    deriving ( Eq, Ord, Show )
 
 instance ObjectName RenderbufferObject where
-   isObjectName = fmap unmarshalGLboolean . glIsRenderbuffer . renderbufferID
+   isObjectName =
+     liftIO . fmap unmarshalGLboolean . glIsRenderbuffer . renderbufferID
 
    deleteObjectNames objs =
-      withArrayLen (map renderbufferID objs) $
+      liftIO . withArrayLen (map renderbufferID objs) $
          glDeleteRenderbuffers . fromIntegral
 
 instance GeneratableObjectName RenderbufferObject where
    genObjectNames n =
-      allocaArray n $ \buf -> do
+      liftIO . allocaArray n $ \buf -> do
          glGenRenderbuffers (fromIntegral n) buf
          fmap (map RenderbufferObject) $ peekArray n buf
+
+instance CanBeLabeled RenderbufferObject where
+   objectLabel = objectNameLabel GL_RENDERBUFFER . renderbufferID

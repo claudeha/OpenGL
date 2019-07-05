@@ -2,7 +2,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.PolygonMode
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 -- 
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -17,7 +17,7 @@ module Graphics.Rendering.OpenGL.GL.PolygonMode (
    PolygonMode(..), marshalPolygonMode, unmarshalPolygonMode
 ) where
 
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -29,13 +29,13 @@ data PolygonMode =
 
 marshalPolygonMode :: PolygonMode -> GLenum
 marshalPolygonMode x = case x of
-   Point -> gl_POINT
-   Line -> gl_LINE
-   Fill -> gl_FILL
+   Point -> GL_POINT
+   Line -> GL_LINE
+   Fill -> GL_FILL
 
 unmarshalPolygonMode :: GLenum -> PolygonMode
 unmarshalPolygonMode x
-   | x == gl_POINT = Point
-   | x == gl_LINE = Line
-   | x == gl_FILL = Fill
+   | x == GL_POINT = Point
+   | x == GL_LINE = Line
+   | x == GL_FILL = Fill
    | otherwise = error ("unmarshalPolygonMode: illegal value " ++ show x)

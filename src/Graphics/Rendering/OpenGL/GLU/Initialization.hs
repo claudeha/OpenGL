@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GLU.Initialization
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 -- 
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -16,21 +16,18 @@ module Graphics.Rendering.OpenGL.GLU.Initialization (
    gluVersion, gluExtensions
 ) where
 
-import Foreign.C.String
-import Foreign.Ptr
-import Graphics.Rendering.GLU.Raw
-import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
-import Graphics.Rendering.OpenGL.Raw
+import Data.StateVar
+import Graphics.GLU
+import Graphics.Rendering.OpenGL.GL.ByteString
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
 gluVersion :: GettableStateVar String
-gluVersion = makeGettableStateVar (getString glu_VERSION)
+gluVersion = makeGettableStateVar (getString GLU_VERSION)
 
 gluExtensions :: GettableStateVar [String]
-gluExtensions = makeGettableStateVar (fmap words $ getString glu_EXTENSIONS)
+gluExtensions = makeGettableStateVar (fmap words $ getString GLU_EXTENSIONS)
 
 getString :: GLenum -> IO String
-getString n = gluGetString n >>=
-              maybeNullPtr (return "") (peekCString . castPtr)
+getString = getStringWith . gluGetString

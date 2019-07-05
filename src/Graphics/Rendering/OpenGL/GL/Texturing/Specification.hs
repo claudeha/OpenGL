@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.Texturing.Specification
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -73,16 +73,16 @@ module Graphics.Rendering.OpenGL.GL.Texturing.Specification (
 ) where
 
 import Foreign.Ptr
+import Data.StateVar
 import Graphics.Rendering.OpenGL.GL.CoordTrans
 import Graphics.Rendering.OpenGL.GL.FramebufferObjects.RenderbufferTarget
 import Graphics.Rendering.OpenGL.GL.GLboolean
 import Graphics.Rendering.OpenGL.GL.PixelData
 import Graphics.Rendering.OpenGL.GL.PixelRectangles
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.Texturing.PixelInternalFormat
 import Graphics.Rendering.OpenGL.GL.Texturing.TextureTarget
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -299,7 +299,7 @@ texImage2DMultisample :: TextureTarget2DMultisample
                       -> IO ()
 texImage2DMultisample target proxy (Samples s) int (TextureSize2D w h) loc =
    glTexImage2DMultisample
-      (marshalMultisample proxy target) s (marshalPixelInternalFormat int)
+      (marshalMultisample proxy target) s (fromIntegral (marshalPixelInternalFormat int))
       w h (marshalSampleLocations loc)
 
 marshalMultisample :: ParameterizedTextureTarget t => Proxy -> t -> GLenum
@@ -316,7 +316,7 @@ texImage3DMultisample :: TextureTarget2DMultisampleArray
                       -> IO ()
 texImage3DMultisample target proxy (Samples s) int (TextureSize3D w h d) loc =
    glTexImage3DMultisample
-      (marshalMultisample proxy target) s (marshalPixelInternalFormat int)
+      (marshalMultisample proxy target) s (fromIntegral (marshalPixelInternalFormat int))
       w h d (marshalSampleLocations loc)
 
 --------------------------------------------------------------------------------

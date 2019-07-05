@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.FramebufferObjects.RenderbufferTarget
--- Copyright   :  (c) Sven Panne 2013
+-- Copyright   :  (c) Sven Panne 2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -19,7 +19,7 @@ module Graphics.Rendering.OpenGL.GL.FramebufferObjects.RenderbufferTarget (
 
 import Foreign.Marshal
 import Graphics.Rendering.OpenGL.GL.PeekPoke
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -28,7 +28,7 @@ data RenderbufferTarget = Renderbuffer
 
 marshalRenderbufferTarget :: RenderbufferTarget -> GLenum
 marshalRenderbufferTarget x = case x of
-    Renderbuffer -> gl_RENDERBUFFER
+    Renderbuffer -> GL_RENDERBUFFER
 
 -----------------------------------------------------------------------------
 

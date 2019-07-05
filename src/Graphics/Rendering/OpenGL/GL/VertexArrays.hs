@@ -1,7 +1,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.VertexArrays
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -26,28 +26,39 @@ module Graphics.Rendering.OpenGL.GL.VertexArrays (
    clientState, clientActiveTexture,
 
    -- * Dereferencing and Rendering
-   ArrayIndex, NumArrayIndices, NumIndexBlocks,
-   arrayElement, drawArrays, multiDrawArrays, drawElements, multiDrawElements,
-   drawRangeElements, maxElementsVertices, maxElementsIndices, lockArrays,
+   ArrayIndex, NumArrayIndices, NumIndexBlocks, NumInstances,
+   BaseInstance, BaseVertex,
+   arrayElement,
+
+   drawArrays, drawArraysInstancedBaseInstance, drawArraysInstanced,
+   multiDrawArrays,
+
+   drawElements, drawElementsInstancedBaseInstance, drawElementsInstanced,
+   multiDrawElements, drawRangeElements,
+
+   drawElementsBaseVertex, drawRangeElementsBaseVertex,
+   drawElementsInstancedBaseVertex, drawElementsInstancedBaseVertexBaseInstance,
+   multiDrawElementsBaseVertex,
+
+   maxElementsVertices, maxElementsIndices, lockArrays,
    primitiveRestartIndex, primitiveRestartIndexNV,
 
    -- * Generic Vertex Attribute Arrays
    vertexAttribPointer, vertexAttribArray,
 ) where
 
-import Foreign.Marshal.Utils
-import Foreign.Ptr
-import Foreign.Storable
+import Data.StateVar
+import Foreign.Ptr ( Ptr, nullPtr )
 import Graphics.Rendering.OpenGL.GL.Capability
 import Graphics.Rendering.OpenGL.GL.DataType
 import Graphics.Rendering.OpenGL.GL.GLboolean
 import Graphics.Rendering.OpenGL.GL.PrimitiveMode
+import Graphics.Rendering.OpenGL.GL.PrimitiveModeInternal
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
 import Graphics.Rendering.OpenGL.GL.Texturing.TextureUnit
 import Graphics.Rendering.OpenGL.GL.VertexSpec
 import Graphics.Rendering.OpenGL.GLU.ErrorsInternal
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -78,15 +89,15 @@ data ClientArrayType =
 
 marshalClientArrayType :: ClientArrayType -> GLenum
 marshalClientArrayType x = case x of
-   VertexArray -> gl_VERTEX_ARRAY
-   NormalArray -> gl_NORMAL_ARRAY
-   ColorArray -> gl_COLOR_ARRAY
-   IndexArray -> gl_INDEX_ARRAY
-   TextureCoordArray -> gl_TEXTURE_COORD_ARRAY
-   EdgeFlagArray -> gl_EDGE_FLAG_ARRAY
-   FogCoordArray -> gl_FOG_COORD_ARRAY
-   SecondaryColorArray -> gl_SECONDARY_COLOR_ARRAY
-   MatrixIndexArray -> gl_MATRIX_INDEX_ARRAY
+   VertexArray -> GL_VERTEX_ARRAY
+   NormalArray -> GL_NORMAL_ARRAY
+   ColorArray -> GL_COLOR_ARRAY
+   IndexArray -> GL_INDEX_ARRAY
+   TextureCoordArray -> GL_TEXTURE_COORD_ARRAY
+   EdgeFlagArray -> GL_EDGE_FLAG_ARRAY
+   FogCoordArray -> GL_FOG_COORD_ARRAY
+   SecondaryColorArray -> GL_SECONDARY_COLOR_ARRAY
+   MatrixIndexArray -> GL_MATRIX_INDEX_ARRAY_ARB
 
 -- Hmmm...
 clientArrayTypeToEnableCap :: ClientArrayType -> EnableCap
@@ -274,20 +285,20 @@ data InterleavedArrays =
 
 marshalInterleavedArrays :: InterleavedArrays -> GLenum
 marshalInterleavedArrays x = case x of
-   V2f -> gl_V2F
-   V3f -> gl_V3F
-   C4ubV2f -> gl_C4UB_V2F
-   C4ubV3f -> gl_C4UB_V3F
-   C3fV3f -> gl_C3F_V3F
-   N3fV3f -> gl_N3F_V3F
-   C4fN3fV3f -> gl_C4F_N3F_V3F
-   T2fV3f -> gl_T2F_V3F
-   T4fV4f -> gl_T4F_V4F
-   T2fC4ubV3f -> gl_T2F_C4UB_V3F
-   T2fC3fV3f -> gl_T2F_C3F_V3F
-   T2fN3fV3f -> gl_T2F_N3F_V3F
-   T2fC4fN3fV3f -> gl_T2F_C4F_N3F_V3F
-   T4fC4fN3fV4f -> gl_T4F_C4F_N3F_V4F
+   V2f -> GL_V2F
+   V3f -> GL_V3F
+   C4ubV2f -> GL_C4UB_V2F
+   C4ubV3f -> GL_C4UB_V3F
+   C3fV3f -> GL_C3F_V3F
+   N3fV3f -> GL_N3F_V3F
+   C4fN3fV3f -> GL_C4F_N3F_V3F
+   T2fV3f -> GL_T2F_V3F
+   T4fV4f -> GL_T4F_V4F
+   T2fC4ubV3f -> GL_T2F_C4UB_V3F
+   T2fC3fV3f -> GL_T2F_C3F_V3F
+   T2fN3fV3f -> GL_T2F_N3F_V3F
+   T2fC4fN3fV3f -> GL_T2F_C4F_N3F_V3F
+   T4fC4fN3fV4f -> GL_T4F_C4F_N3F_V4F
 
 --------------------------------------------------------------------------------
 
@@ -323,6 +334,16 @@ type NumArrayIndices = GLsizei
 
 type NumIndexBlocks = GLsizei
 
+type NumInstances = GLsizei
+
+type BaseInstance = GLuint
+
+type BaseVertex = GLint
+
+-- TODO: The ranges (ArrayIndex, ArrayIndex) below should actually use GLuint:
+-- type RangeStart = GLuint
+-- type RangeEnd = GLuint
+
 --------------------------------------------------------------------------------
 
 arrayElement :: ArrayIndex -> IO ()
@@ -331,26 +352,44 @@ arrayElement = glArrayElement
 drawArrays :: PrimitiveMode -> ArrayIndex -> NumArrayIndices -> IO ()
 drawArrays = glDrawArrays . marshalPrimitiveMode
 
-multiDrawArrays ::
-      PrimitiveMode -> Ptr ArrayIndex -> Ptr NumArrayIndices -> NumIndexBlocks
-   -> IO ()
+drawArraysInstancedBaseInstance :: PrimitiveMode -> ArrayIndex -> NumArrayIndices -> NumInstances -> BaseInstance -> IO ()
+drawArraysInstancedBaseInstance = glDrawArraysInstancedBaseInstance . marshalPrimitiveMode
+
+drawArraysInstanced :: PrimitiveMode -> ArrayIndex -> NumArrayIndices -> NumInstances -> IO ()
+drawArraysInstanced = glDrawArraysInstanced . marshalPrimitiveMode
+
+multiDrawArrays :: PrimitiveMode -> Ptr ArrayIndex -> Ptr NumArrayIndices -> NumIndexBlocks -> IO ()
 multiDrawArrays = glMultiDrawArrays . marshalPrimitiveMode
 
 drawElements :: PrimitiveMode -> NumArrayIndices -> DataType -> Ptr a -> IO ()
 drawElements m c = glDrawElements (marshalPrimitiveMode m) c . marshalDataType
 
-multiDrawElements ::
-      PrimitiveMode -> Ptr NumArrayIndices -> DataType -> Ptr (Ptr a)
-   -> NumIndexBlocks -> IO ()
-multiDrawElements m c =
-   glMultiDrawElements (marshalPrimitiveMode m) c . marshalDataType
+drawElementsInstancedBaseInstance :: PrimitiveMode -> NumArrayIndices -> DataType -> Ptr a -> NumInstances -> BaseInstance -> IO ()
+drawElementsInstancedBaseInstance m c = glDrawElementsInstancedBaseInstance (marshalPrimitiveMode m) c . marshalDataType
 
-drawRangeElements ::
-      PrimitiveMode -> (ArrayIndex, ArrayIndex) -> NumArrayIndices -> DataType
-   -> Ptr a -> IO ()
-drawRangeElements m (s, e) c =
-   glDrawRangeElements (marshalPrimitiveMode m) (fromIntegral s)
-                       (fromIntegral e) c . marshalDataType
+drawElementsInstanced :: PrimitiveMode -> NumArrayIndices -> DataType -> Ptr a -> NumInstances -> IO ()
+drawElementsInstanced m c = glDrawElementsInstanced (marshalPrimitiveMode m) c . marshalDataType
+
+multiDrawElements :: PrimitiveMode -> Ptr NumArrayIndices -> DataType -> Ptr (Ptr a) -> NumIndexBlocks -> IO ()
+multiDrawElements m c = glMultiDrawElements (marshalPrimitiveMode m) c . marshalDataType
+
+drawRangeElements :: PrimitiveMode -> (ArrayIndex, ArrayIndex) -> NumArrayIndices -> DataType -> Ptr a -> IO ()
+drawRangeElements m (s, e) c = glDrawRangeElements (marshalPrimitiveMode m) (fromIntegral s) (fromIntegral e) c . marshalDataType
+
+drawElementsBaseVertex :: PrimitiveMode -> NumArrayIndices -> DataType -> Ptr a -> BaseVertex -> IO ()
+drawElementsBaseVertex m c = glDrawElementsBaseVertex (marshalPrimitiveMode m) c . marshalDataType
+
+drawRangeElementsBaseVertex :: PrimitiveMode -> (ArrayIndex, ArrayIndex) -> NumArrayIndices -> DataType -> Ptr a -> BaseVertex -> IO ()
+drawRangeElementsBaseVertex m (s, e) c = glDrawRangeElementsBaseVertex (marshalPrimitiveMode m) (fromIntegral s) (fromIntegral e) c . marshalDataType
+
+drawElementsInstancedBaseVertex :: PrimitiveMode -> NumArrayIndices -> DataType -> Ptr a -> NumInstances -> BaseVertex -> IO ()
+drawElementsInstancedBaseVertex m c = glDrawElementsInstancedBaseVertex (marshalPrimitiveMode m) c . marshalDataType
+
+drawElementsInstancedBaseVertexBaseInstance :: PrimitiveMode -> NumArrayIndices -> DataType -> Ptr a -> NumInstances -> BaseVertex -> BaseInstance -> IO ()
+drawElementsInstancedBaseVertexBaseInstance m c = glDrawElementsInstancedBaseVertexBaseInstance (marshalPrimitiveMode m) c . marshalDataType
+
+multiDrawElementsBaseVertex :: PrimitiveMode -> Ptr NumArrayIndices -> DataType -> Ptr (Ptr a) -> NumIndexBlocks -> Ptr BaseVertex -> IO ()
+multiDrawElementsBaseVertex m c = glMultiDrawElementsBaseVertex (marshalPrimitiveMode m) c . marshalDataType
 
 maxElementsVertices :: GettableStateVar NumArrayIndices
 maxElementsVertices = makeGettableStateVar (getSizei1 id GetMaxElementsVertices)
@@ -372,7 +411,7 @@ getLockArrays = do
       else return Nothing
 
 setLockArrays :: Maybe (ArrayIndex, NumArrayIndices) -> IO ()
-setLockArrays = maybe glUnlockArrays (uncurry glLockArrays)
+setLockArrays = maybe glUnlockArraysEXT (uncurry glLockArraysEXT)
 
 --------------------------------------------------------------------------------
 
@@ -400,47 +439,9 @@ getPrimitiveRestartIndexNV = do
 
 setPrimitiveRestartIndexNV :: Maybe ArrayIndex -> IO ()
 setPrimitiveRestartIndexNV maybeIdx = case maybeIdx of
-   Nothing  -> glDisableClientState gl_PRIMITIVE_RESTART_NV
-   Just idx -> do glEnableClientState gl_PRIMITIVE_RESTART_NV
+   Nothing  -> glDisableClientState GL_PRIMITIVE_RESTART_NV
+   Just idx -> do glEnableClientState GL_PRIMITIVE_RESTART_NV
                   glPrimitiveRestartIndexNV (fromIntegral idx)
-
---------------------------------------------------------------------------------
-
-data GetPointervPName =
-     VertexArrayPointer
-   | NormalArrayPointer
-   | ColorArrayPointer
-   | IndexArrayPointer
-   | TextureCoordArrayPointer
-   | EdgeFlagArrayPointer
-   | FogCoordArrayPointer
-   | SecondaryColorArrayPointer
-   | FeedbackBufferPointer
-   | SelectionBufferPointer
-   | WeightArrayPointer
-   | MatrixIndexArrayPointer
-
-marshalGetPointervPName :: GetPointervPName -> GLenum
-marshalGetPointervPName x = case x of
-   VertexArrayPointer -> gl_VERTEX_ARRAY_POINTER
-   NormalArrayPointer -> gl_NORMAL_ARRAY_POINTER
-   ColorArrayPointer -> gl_COLOR_ARRAY_POINTER
-   IndexArrayPointer -> gl_INDEX_ARRAY_POINTER
-   TextureCoordArrayPointer -> gl_TEXTURE_COORD_ARRAY_POINTER
-   EdgeFlagArrayPointer -> gl_EDGE_FLAG_ARRAY_POINTER
-   FogCoordArrayPointer -> gl_FOG_COORD_ARRAY_POINTER
-   SecondaryColorArrayPointer -> gl_SECONDARY_COLOR_ARRAY_POINTER
-   FeedbackBufferPointer -> gl_FEEDBACK_BUFFER_POINTER
-   SelectionBufferPointer -> gl_SELECTION_BUFFER_POINTER
-   WeightArrayPointer -> gl_WEIGHT_ARRAY_POINTER
-   MatrixIndexArrayPointer -> gl_MATRIX_INDEX_ARRAY_POINTER
-
---------------------------------------------------------------------------------
-
-getPointer :: GetPointervPName -> IO (Ptr a)
-getPointer n = with nullPtr $ \buf -> do
-   glGetPointerv (marshalGetPointervPName n) buf
-   peek buf
 
 --------------------------------------------------------------------------------
 

@@ -2,7 +2,7 @@
 --------------------------------------------------------------------------------
 -- |
 -- Module      :  Graphics.Rendering.OpenGL.GL.RenderMode
--- Copyright   :  (c) Sven Panne 2002-2013
+-- Copyright   :  (c) Sven Panne 2002-2019
 -- License     :  BSD3
 --
 -- Maintainer  :  Sven Panne <svenpanne@gmail.com>
@@ -17,10 +17,10 @@ module Graphics.Rendering.OpenGL.GL.RenderMode (
    RenderMode(..), withRenderMode, renderMode
 ) where
 
+import Data.StateVar
 import Graphics.Rendering.OpenGL.GL.Exception
 import Graphics.Rendering.OpenGL.GL.QueryUtils
-import Graphics.Rendering.OpenGL.GL.StateVar
-import Graphics.Rendering.OpenGL.Raw
+import Graphics.GL
 
 --------------------------------------------------------------------------------
 
@@ -32,15 +32,15 @@ data RenderMode =
 
 marshalRenderMode :: RenderMode -> GLenum
 marshalRenderMode x = case x of
-   Render -> gl_RENDER
-   Feedback -> gl_FEEDBACK
-   Select -> gl_SELECT
+   Render -> GL_RENDER
+   Feedback -> GL_FEEDBACK
+   Select -> GL_SELECT
 
 unmarshalRenderMode :: GLenum -> RenderMode
 unmarshalRenderMode x
-   | x == gl_RENDER = Render
-   | x == gl_FEEDBACK = Feedback
-   | x == gl_SELECT = Select
+   | x == GL_RENDER = Render
+   | x == GL_FEEDBACK = Feedback
+   | x == GL_SELECT = Select
    | otherwise = error ("unmarshalRenderMode: illegal value " ++ show x)
 
 --------------------------------------------------------------------------------
